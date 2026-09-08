@@ -73,78 +73,76 @@ export function PaletteCard({
   theme: Theme;
 }) {
   const rem = layout.rem;
-  const cardW = Math.min(rem * 26, layout.width - rem * 4);
-  const rowH = rem * 2;
+  const rowH = rem * 1.8;
   const input = useRef<NodeHandle | null>(null);
   useEffect(() => {
     input.current?.focus();
   }, []);
+  
   return (
-    <ModalCard layout={layout} theme={theme} width={cardW} onClose={actions.paletteClose}>
+    <>
+      <Backdrop layout={layout} onClose={actions.paletteClose} />
       <Box
         style={{
-          height: rem * 2.4,
-          alignItems: "center",
-          padding: { left: rem * 0.85, right: rem * 0.85 },
-          border: { bottom: [1, theme.hairline] },
+          position: "absolute",
+          inset: { bottom: 0, left: 0 },
+          width: layout.width,
+          flexDirection: "column",
+          background: theme.bg,
+          border: { top: [1, theme.hairline] },
         }}
       >
-        <Input
-          ref={input}
-          autoFocus
-          style={{ flexGrow: 1, flexBasis: 0, wrap: false, fontSize: rem }}
-          caretColor={theme.accent}
-          selectionColor={theme.selection}
-          onChange={(text) => actions.paletteQuery(text)}
-        />
-      </Box>
-      <Box style={{ flexDirection: "column" }}>
-        {view.items.length === 0 && (
-          <Text
-            style={{
-              padding: { left: rem * 0.85, top: rem * 0.35, bottom: rem * 0.35 },
-              fontSize: rem * 0.92,
-              color: theme.muted,
-              selectable: false,
-            }}
-          >
-            no matching actions
-          </Text>
-        )}
-        {view.items.map((item, i) => (
-          <Box
-            key={item.id}
-            style={{
-              height: rowH,
-              alignItems: "center",
-              gap: rem * 0.55,
-              padding: { left: rem * 0.85, right: rem * 0.85 },
-              background: i === view.index ? theme.hover : undefined,
-              hoverBackground: theme.hover,
-              cornerRadius: lastRowRadius(i === view.items.length - 1, rem),
-            }}
-            onClick={() => actions.paletteRun(i)}
-          >
-            <Text
-              style={{
-                flexGrow: 1,
-                flexBasis: 0,
-                fontSize: rem * 0.95,
-                wrap: false,
-                selectable: false,
-              }}
-            >
-              {item.label}
-            </Text>
-            <Text
-              style={{ fontSize: rem * 0.82, color: theme.muted, wrap: false, selectable: false }}
-            >
-              {item.shortcut}
+        {view.items.length > 0 ? (
+          <Box style={{ flexDirection: "column", border: { bottom: [1, theme.hairline] } }}>
+            {view.items.map((item, i) => (
+              <Box
+                key={item.id}
+                style={{
+                  height: rowH,
+                  alignItems: "center",
+                  gap: rem * 0.55,
+                  padding: { left: rem * 0.85, right: rem * 0.85 },
+                  background: i === view.index ? theme.hover : undefined,
+                  hoverBackground: theme.hover,
+                }}
+                onClick={() => actions.paletteRun(i)}
+              >
+                <Text style={{ flexGrow: 1, flexBasis: 0, fontSize: rem * 0.95, wrap: false, selectable: false }}>
+                  {item.label}
+                </Text>
+                <Text style={{ fontSize: rem * 0.82, color: theme.muted, wrap: false, selectable: false }}>
+                  {item.shortcut}
+                </Text>
+              </Box>
+            ))}
+          </Box>
+        ) : (
+          <Box style={{ border: { bottom: [1, theme.hairline] } }}>
+            <Text style={{ padding: { left: rem * 2, top: rem * 0.35, bottom: rem * 0.35 }, fontSize: rem * 0.92, color: theme.muted, selectable: false }}>
+              no matching actions
             </Text>
           </Box>
-        ))}
+        )}
+        <Box
+          style={{
+            height: rem * 2,
+            alignItems: "center",
+            padding: { left: rem * 0.85, right: rem * 0.85 },
+            gap: rem * 0.5,
+          }}
+        >
+          <Text style={{ fontSize: rem, color: theme.accent, selectable: false }}>:</Text>
+          <Input
+            ref={input}
+            autoFocus
+            style={{ flexGrow: 1, flexBasis: 0, wrap: false, fontSize: rem }}
+            caretColor={theme.accent}
+            selectionColor={theme.selection}
+            onChange={(text) => actions.paletteQuery(text)}
+          />
+        </Box>
       </Box>
-    </ModalCard>
+    </>
   );
 }
 
