@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Box, Input, Text } from "pixel-react";
-import type { NodeHandle } from "pixel-react";
+import type { NodeHandle, Rgba } from "pixel-react";
 import type { BrowserState } from "../page/types";
 import { Icon } from "./icons";
 import type { Theme } from "./theme";
@@ -280,6 +280,95 @@ export function NewTabCard({
         </Box>
       )}
     </ModalCard>
+  );
+}
+
+export interface DialogOption {
+  key: string;
+  label: string;
+  color?: string | Rgba;
+  action: () => void;
+}
+
+export function DialogCard({
+  layout,
+  theme,
+  title,
+  message,
+  options,
+  onClose,
+}: {
+  layout: ChromeLayout;
+  theme: Theme;
+  title: string;
+  message: string;
+  options: DialogOption[];
+  onClose: () => void;
+}) {
+  const rem = layout.rem;
+  const cardW = Math.min(rem * 32, layout.width - rem * 4);
+  const input = useRef<NodeHandle | null>(null);
+  useEffect(() => {
+    input.current?.focus();
+  }, []);
+  
+  return (
+    <ModalCard layout={layout} theme={theme} width={cardW} onClose={onClose}>
+      <Box style={{ flexDirection: "column", padding: rem, gap: rem * 0.5 }}>
+        <Text style={{ fontSize: rem, color: theme.fg }}>{title}</Text>
+        <Text style={{ fontSize: rem * 0.9, color: theme.muted, wrap: true }}>
+          {message}
+        </Text>
+        <Box style={{ gap: rem, margin: { top: rem * 0.5 } }}>
+          {options.map((opt) => (
+            <Text
+              key={opt.key}
+              style={{ fontSize: rem * 0.9, color: opt.color || theme.accent, selectable: false }}
+            >
+              [{opt.key.toUpperCase()}] {opt.label}
+            </Text>
+          ))}
+        </Box>
+        <Input
+          ref={input}
+          autoFocus
+          style={{ width: 0, height: 0 }}
+          onChange={(text) => {
+            const key = text.toLowerCase();
+            const option = options.find((o) => o.key.toLowerCase() === key);
+            if (option) option.action();
+            else if (key === "escape") onClose();
+          }}
+        />
+      </Box>
+    </ModalCard>
+  );
+}
+
+export function PermissionCard({
+  view,
+  actions,
+  layout,
+  theme,
+}: {
+  view: import("./types").PermissionRequestView;
+  actions: ChromeActions;
+  layout: ChromeLayout;
+  theme: Theme;
+}) {
+  const origin = view.origin ? new URL(view.origin).hostname : "This website";
+  return (
+    <DialogCard
+      layout={layout}
+      theme={theme}
+      title="Permission Request"
+      message={`${origin} wants to use your ${view.permission}.`}
+      options={[
+        { key: "y", label: "Allow", color: theme.accent, action: actions.permissionAllow },
+        { key: "n", label: "Block", color: theme.disabled, action: actions.permissionDeny },
+      ]}
+      onClose={actions.permissionDeny}
+    />
   );
 }
 
