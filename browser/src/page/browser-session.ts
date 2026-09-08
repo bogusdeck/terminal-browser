@@ -3,7 +3,7 @@ import path from "node:path";
 import { Readable } from "node:stream";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { app, net, session } from "electron";
+import { app, net, session, systemPreferences } from "electron";
 import type { Session, WebContents } from "electron";
 
 export interface DownloadProgress {
@@ -14,11 +14,17 @@ export interface DownloadProgress {
   state: "progressing" | "done" | "failed";
 }
 
+const userGrantedMedia = new Set<string>();
+
 const GRANTED = new Set([
   "fullscreen",
   "pointerLock",
   "clipboard-sanitized-write",
   "midi",
+  "media",
+  "display-capture",
+  "camera",
+  "microphone",
 ]);
 
 const configured = new WeakSet<Session>();
@@ -60,7 +66,62 @@ export function configureBrowserSession(
 
   target.registerPreloadScript({ type: "frame", filePath: selectPreloadPath() });
 
-  target.setPermissionRequestHandler((contents, permission, callback) => {
+  const cleanUserAgent = target.getUserAgent()
+    .replace(/terminal-browser\/[0-9\.]+\s?/g, "")
+    .replace(/Electron\/[0-9\.]+\s?/g, "")
+    .trim();
+  target.setUserAgent(cleanUserAgent);
+
+  target.setPermissionRequestHandler((contents, permission, callback, details) => {
+    const origin = details.requestingUrl ? new URL(details.requestingUrl).origin : null;
+    const cacheKey = origin ? `${origin}:${permission}` : null;
+    
+    const isDarwin = process.platform === "darwin";
+    if (isDarwin && (permission === "media" || (permission as string) === "camera" || (permission as string) === "microphone")) {
+      const ask = async () => {
+        if (permission === "media") {
+          const mediaTypes = (details as any)?.mediaTypes || ["video", "audio"];
+          if (mediaTypes.includes("video") && systemPreferences.getMediaAccessStatus("camera") === "not-determined") {
+            await systemPreferences.askForMediaAccess("camera");
+          }
+          if (mediaTypes.includes("audio") && systemPreferences.getMediaAccessStatus("microphone") === "not-determined") {
+            await systemPreferences.askForMediaAccess("microphone");
+          }
+        } else {
+          const type = (permission as string) === "camera" ? "camera" : "microphone";
+          if (systemPreferences.getMediaAccessStatus(type) === "not-determined") {
+            await systemPreferences.askForMediaAccess(type);
+          }
+        }
+        
+        if (cacheKey && userGrantedMedia.has(cacheKey)) {
+          callback(granted(contents, permission));
+          return;
+        }
+        
+        const finish = (allow: boolean) => {
+          if (allow && cacheKey) userGrantedMedia.add(cacheKey);
+          callback(allow && granted(contents, permission));
+        };
+        app.emit("terminal-browser:permission-request", contents, permission, details.requestingUrl, finish);
+      };
+      ask().catch(() => callback(false));
+      return;
+    }
+    
+    if (cacheKey && userGrantedMedia.has(cacheKey)) {
+      callback(granted(contents, permission));
+      return;
+    }
+    
+    const finish = (allow: boolean) => {
+      if (allow && cacheKey) userGrantedMedia.add(cacheKey);
+      callback(allow && granted(contents, permission));
+    };
+    if (permission === "media" || (permission as string) === "camera" || (permission as string) === "microphone") {
+      app.emit("terminal-browser:permission-request", contents, permission, details.requestingUrl, finish);
+      return;
+    }
     callback(granted(contents, permission));
   });
   target.setPermissionCheckHandler((contents, permission) => granted(contents, permission));
