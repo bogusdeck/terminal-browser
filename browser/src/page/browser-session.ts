@@ -130,7 +130,13 @@ export function configureBrowserSession(
       permStr === "video-capture"
     ) {
       if (origin) userRequestedMediaOrigins.add(origin);
-      const mediaTypes: string[] = (details as any)?.mediaTypes || [];
+      const rawTypes = (details as any)?.mediaTypes;
+      const singleType = (details as any)?.mediaType;
+      const mediaTypes: string[] = Array.isArray(rawTypes)
+        ? rawTypes
+        : typeof singleType === "string"
+        ? [singleType]
+        : [];
       const needsCamera =
         permStr === "camera" ||
         permStr === "video-capture" ||
@@ -221,7 +227,13 @@ export function configureBrowserSession(
         permStr === "audio-capture" ||
         permStr === "video-capture")
     ) {
-      const mediaTypes: string[] = (details as any)?.mediaTypes || [];
+      const rawTypes = (details as any)?.mediaTypes;
+      const singleType = (details as any)?.mediaType;
+      const mediaTypes: string[] = Array.isArray(rawTypes)
+        ? rawTypes
+        : typeof singleType === "string"
+        ? [singleType]
+        : [];
       const checkCamera =
         permStr === "camera" ||
         permStr === "video-capture" ||

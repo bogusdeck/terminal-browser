@@ -218,10 +218,7 @@ class Session {
   };
   private readonly onPermissionRequest = (contents: any, permission: string, origin: string, finish: (allow: boolean) => void) => {
     const tab = this.tabs.findByContents(contents.id);
-    if (!tab) {
-      finish(false);
-      return;
-    }
+    if (!tab) return;
     this.permissionRequest?.finish(false);
     this.permissionRequest = { contentsId: contents.id, permission, origin, finish };
     this.render();
@@ -880,7 +877,6 @@ class Session {
       }
     },
     pageMenuAction: (id) => {
-      this.closePageMenu();
       this.runPageMenu(id);
     },
     pageMenuClose: () => this.closePageMenu(),
